@@ -50,7 +50,8 @@ export const createTestApp = async () => {
   const app = buildServer({
     dataDir,
     publicDir,
-    logger: false
+    logger: false,
+    storageDriver: "file"
   });
 
   await app.ready();

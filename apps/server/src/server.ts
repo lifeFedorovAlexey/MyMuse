@@ -11,8 +11,10 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { config } from "./config.js";
 import { FileStore } from "./store.js";
+import { PgStore } from "./pg-store.js";
 import { createAccessToken, hashPassword, verifyAccessToken, verifyPassword } from "./auth.js";
 import type { Track, User } from "./types.js";
+import type { AppStore } from "./store.contract.js";
 
 const createSafeFilename = (inputName: string): string => {
   const ext = path.extname(inputName || "").slice(0, 10);
@@ -23,6 +25,8 @@ type BuildServerOptions = {
   dataDir?: string;
   publicDir?: string;
   logger?: boolean;
+  storageDriver?: "postgres" | "file";
+  databaseUrl?: string;
 };
 
 type AuthRequest = FastifyRequest & { authUser?: User };
@@ -34,6 +38,7 @@ const publicApiRoutes = new Set([
   "/s/:token",
   "/invite/:token",
   "/auth/register-owner",
+  "/auth/setup-state",
   "/auth/login",
   "/auth/accept-invite",
   "/api/shares/:token",
@@ -47,7 +52,14 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
   });
   const dataDir = path.resolve(options.dataDir ?? config.DATA_DIR);
   const publicDir = path.resolve(options.publicDir ?? path.join(process.cwd(), "public"));
-  const store = new FileStore(dataDir);
+  const storageDriver = options.storageDriver ?? config.STORAGE_DRIVER;
+  const store: AppStore =
+    storageDriver === "postgres"
+      ? new PgStore({
+          uploadsBaseDir: dataDir,
+          databaseUrl: options.databaseUrl ?? config.DATABASE_URL
+        })
+      : new FileStore(dataDir);
 
   const sanitizeUser = (user: User) => ({
     id: user.id,
@@ -128,7 +140,7 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
       return;
     }
 
-    const pattern = request.routeOptions.url;
+    const pattern = request.routeOptions.url ?? request.url;
     if (publicApiRoutes.has(pattern)) {
       return;
     }
@@ -189,6 +201,13 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
       user: sanitizeUser(user),
       accessToken: createAccessToken(user)
     });
+  });
+
+  app.get("/auth/setup-state", async () => {
+    return {
+      ownerExists: await store.ownerExists(),
+      authRequired: config.AUTH_REQUIRED
+    };
   });
 
   app.post("/auth/login", async (request, reply) => {

@@ -28,6 +28,7 @@ MyMuse provides tooling, not licensed music catalog distribution.
 
 ```bash
 npm install
+npm run infra:up
 npm run dev:server
 ```
 
@@ -65,5 +66,14 @@ npm run test:server
 
 By default demo data is stored in `apps/server/data`:
 
-- `db.json` - metadata records;
 - `uploads/` - uploaded audio files.
+
+## Runtime Storage
+
+Default runtime storage is PostgreSQL (Docker Compose).
+
+- Postgres service: `docker-compose.yml`
+- Default DSN: `postgres://mymuse:mymuse@127.0.0.1:5432/mymuse`
+- Tables are auto-created on server startup.
+
+For local test mode (without postgres), tests use `file` driver internally.

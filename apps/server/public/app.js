@@ -16,6 +16,10 @@ const refs = {
   statStorage: document.getElementById("stat-storage"),
   authPanel: document.getElementById("auth-panel"),
   authStatus: document.getElementById("auth-status"),
+  authHint: document.getElementById("auth-hint"),
+  authMessage: document.getElementById("auth-message"),
+  registerCard: document.getElementById("register-card"),
+  loginCard: document.getElementById("login-card"),
   registerForm: document.getElementById("register-form"),
   loginForm: document.getElementById("login-form"),
   logoutBtn: document.getElementById("logout-btn"),
@@ -33,7 +37,8 @@ const state = {
   search: "",
   shareToken: null,
   accessToken: localStorage.getItem("mymuse_access_token"),
-  user: null
+  user: null,
+  ownerExists: false
 };
 
 const getShareTokenFromPath = () => {
@@ -49,6 +54,18 @@ const showToast = (message) => {
   refs.toast.classList.remove("hidden");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => refs.toast.classList.add("hidden"), 2500);
+};
+
+const setAuthMessage = (message, type = "ok") => {
+  if (!message) {
+    refs.authMessage.classList.add("hidden");
+    refs.authMessage.classList.remove("ok", "error");
+    refs.authMessage.textContent = "";
+    return;
+  }
+  refs.authMessage.textContent = message;
+  refs.authMessage.classList.remove("hidden", "ok", "error");
+  refs.authMessage.classList.add(type);
 };
 
 const authHeaders = () =>
@@ -69,7 +86,12 @@ const api = async (url, options = {}) => {
   const response = await fetch(url, merged);
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "Request failed");
+    let message = text;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.message || parsed.error || text;
+    } catch {}
+    throw new Error(message || `Request failed (${response.status})`);
   }
   if (response.status === 204) {
     return null;
@@ -89,8 +111,27 @@ const setAccessToken = (token) => {
 const setAuthState = (user) => {
   state.user = user;
   refs.authStatus.textContent = user
-    ? `Authenticated as ${user.name} (${user.role})`
-    : "Not authenticated.";
+    ? `Вошли как ${user.name} (${user.role})`
+    : "Не авторизован.";
+  refs.logoutBtn.style.display = user ? "inline-flex" : "none";
+};
+
+const renderAuthMode = () => {
+  const showRegister = !state.ownerExists && !state.user;
+  const showLogin = state.ownerExists && !state.user;
+  refs.registerCard.style.display = showRegister ? "" : "none";
+  refs.loginCard.style.display = showLogin ? "" : "none";
+};
+
+const loadSetupState = async () => {
+  const setup = await api("/auth/setup-state", { headers: {} });
+  state.ownerExists = setup.ownerExists;
+  if (setup.ownerExists) {
+    refs.authHint.textContent = "Владелец уже создан. Войди через логин.";
+  } else {
+    refs.authHint.textContent = "Первый запуск: создай владельца.";
+  }
+  renderAuthMode();
 };
 
 const requireAuthUi = (enabled) => {
@@ -107,7 +148,7 @@ const playTrack = (track) => {
     ? `/api/shares/${state.shareToken}/stream`
     : `/api/tracks/${track.id}/stream`;
   refs.player.src = source;
-  refs.nowPlaying.textContent = `Now playing: ${track.title} - ${track.artist}`;
+  refs.nowPlaying.textContent = `Сейчас играет: ${track.title} - ${track.artist}`;
   refs.player.play().catch(() => undefined);
 };
 
@@ -144,7 +185,7 @@ const renderTracks = () => {
   refs.trackList.innerHTML = "";
   const filtered = currentTrackList();
   if (filtered.length === 0) {
-    refs.trackList.innerHTML = '<li class="item"><div class="item-sub">No tracks found.</div></li>';
+    refs.trackList.innerHTML = '<li class="item"><div class="item-sub">Треки не найдены.</div></li>';
     return;
   }
 
@@ -153,19 +194,19 @@ const renderTracks = () => {
     li.className = "item";
     li.innerHTML = `
       <div class="item-title">${track.title}</div>
-      <div class="item-sub">${track.artist} • ${track.album}</div>
+      <div class="item-sub">${track.artist} - ${track.album}</div>
       <div class="actions"></div>
     `;
 
     const actions = li.querySelector(".actions");
     const playBtn = document.createElement("button");
-    playBtn.textContent = "Play";
+    playBtn.textContent = "Слушать";
     playBtn.addEventListener("click", () => playTrack(track));
     actions.appendChild(playBtn);
 
     if (!state.shareToken) {
       const shareBtn = document.createElement("button");
-      shareBtn.textContent = "Share";
+      shareBtn.textContent = "Поделиться";
       shareBtn.className = "secondary";
       shareBtn.addEventListener("click", async () => {
         const result = await api("/api/shares", {
@@ -174,19 +215,19 @@ const renderTracks = () => {
           body: JSON.stringify({ type: "track", targetId: track.id, expiresInHours: 72 })
         });
         await loadPrivateData();
-        window.prompt("Share link", result.url);
+        window.prompt("Ссылка", result.url);
       });
       actions.appendChild(shareBtn);
 
       const editBtn = document.createElement("button");
-      editBtn.textContent = "Edit";
+      editBtn.textContent = "Изменить";
       editBtn.className = "secondary";
       editBtn.addEventListener("click", async () => {
-        const title = window.prompt("Title", track.title);
+        const title = window.prompt("Название", track.title);
         if (!title) return;
-        const artist = window.prompt("Artist", track.artist);
+        const artist = window.prompt("Артист", track.artist);
         if (!artist) return;
-        const album = window.prompt("Album", track.album);
+        const album = window.prompt("Альбом", track.album);
         if (!album) return;
         await api(`/api/tracks/${track.id}`, {
           method: "PATCH",
@@ -198,10 +239,10 @@ const renderTracks = () => {
       actions.appendChild(editBtn);
 
       const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Delete";
+      deleteBtn.textContent = "Удалить";
       deleteBtn.className = "danger";
       deleteBtn.addEventListener("click", async () => {
-        if (!window.confirm(`Delete track "${track.title}"?`)) return;
+        if (!window.confirm(`Удалить трек "${track.title}"?`)) return;
         await api(`/api/tracks/${track.id}`, { method: "DELETE" });
         await loadPrivateData();
       });
@@ -210,7 +251,7 @@ const renderTracks = () => {
       if (state.playlists.length > 0) {
         const select = makePlaylistSelector();
         const addBtn = document.createElement("button");
-        addBtn.textContent = "Add to playlist";
+        addBtn.textContent = "В плейлист";
         addBtn.className = "secondary";
         addBtn.addEventListener("click", async () => {
           await api(`/api/playlists/${select.value}/tracks`, {
@@ -236,7 +277,7 @@ const renderPlaylists = () => {
     return;
   }
   if (state.playlists.length === 0) {
-    refs.playlistList.innerHTML = '<li class="item"><div class="item-sub">No playlists yet.</div></li>';
+    refs.playlistList.innerHTML = '<li class="item"><div class="item-sub">Плейлистов пока нет.</div></li>';
     return;
   }
 
@@ -247,7 +288,7 @@ const renderPlaylists = () => {
       <div class="item-title">${playlist.name}</div>
       <div class="item-sub">${playlist.tracks.length} tracks</div>
       <div class="actions">
-        <button class="secondary share-playlist" data-id="${playlist.id}">Share playlist</button>
+        <button class="secondary share-playlist" data-id="${playlist.id}">Поделиться плейлистом</button>
       </div>
     `;
     li.querySelector(".share-playlist").addEventListener("click", async () => {
@@ -257,7 +298,7 @@ const renderPlaylists = () => {
         body: JSON.stringify({ type: "playlist", targetId: playlist.id, expiresInHours: 72 })
       });
       await loadPrivateData();
-      window.prompt("Playlist link", result.url);
+      window.prompt("Ссылка на плейлист", result.url);
     });
     refs.playlistList.appendChild(li);
   }
@@ -270,16 +311,16 @@ const renderShares = () => {
     return;
   }
   if (state.shares.length === 0) {
-    refs.shareList.innerHTML = '<li class="item"><div class="item-sub">No active shares.</div></li>';
+    refs.shareList.innerHTML = '<li class="item"><div class="item-sub">Активных ссылок нет.</div></li>';
     return;
   }
   for (const share of state.shares) {
     const li = document.createElement("li");
     li.className = "item";
     li.innerHTML = `
-      <div class="item-title">${share.type} • ${share.targetId}</div>
+      <div class="item-title">${share.type} - ${share.targetId}</div>
       <a class="share-url" href="${share.url}" target="_blank" rel="noreferrer">${share.url}</a>
-      <div class="item-sub">Expires: ${share.expiresAt || "never"}</div>
+      <div class="item-sub">Истекает: ${share.expiresAt || "никогда"}</div>
       <div class="actions">
         <button class="danger revoke-share">Revoke</button>
       </div>
@@ -287,7 +328,7 @@ const renderShares = () => {
     li.querySelector(".revoke-share").addEventListener("click", async () => {
       await api(`/api/shares/${share.token}`, { method: "DELETE" });
       await loadPrivateData();
-      showToast("Share revoked");
+      showToast("Ссылка отключена");
     });
     refs.shareList.appendChild(li);
   }
@@ -339,6 +380,7 @@ const renderShareView = async (token) => {
 
 refs.registerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  setAuthMessage("");
   try {
     const response = await api("/auth/register-owner", {
       method: "POST",
@@ -351,16 +393,21 @@ refs.registerForm.addEventListener("submit", async (event) => {
     });
     setAccessToken(response.accessToken);
     setAuthState(response.user);
-    showToast("Owner registered");
+    setAuthMessage("Владелец успешно создан.", "ok");
+    showToast("Успешно");
     requireAuthUi(true);
+    state.ownerExists = true;
+    await loadSetupState();
     await loadPrivateData();
   } catch (error) {
-    showToast(`Register failed: ${error.message}`);
+    setAuthMessage(`Ошибка регистрации: ${error.message}`, "error");
+    showToast("Ошибка");
   }
 });
 
 refs.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  setAuthMessage("");
   try {
     const response = await api("/auth/login", {
       method: "POST",
@@ -372,11 +419,13 @@ refs.loginForm.addEventListener("submit", async (event) => {
     });
     setAccessToken(response.accessToken);
     setAuthState(response.user);
-    showToast("Logged in");
+    setAuthMessage("Вход выполнен.", "ok");
+    showToast("Успешно");
     requireAuthUi(true);
     await loadPrivateData();
   } catch (error) {
-    showToast(`Login failed: ${error.message}`);
+    setAuthMessage(`Ошибка входа: ${error.message}`, "error");
+    showToast("Ошибка");
   }
 });
 
@@ -390,6 +439,7 @@ refs.logoutBtn.addEventListener("click", () => {
   renderPlaylists();
   renderShares();
   requireAuthUi(false);
+  renderAuthMode();
 });
 
 refs.uploadForm.addEventListener("submit", async (event) => {
@@ -404,7 +454,7 @@ refs.uploadForm.addEventListener("submit", async (event) => {
   });
   refs.uploadForm.reset();
   await loadPrivateData();
-  showToast("Track uploaded");
+  showToast("Трек загружен");
 });
 
 refs.playlistForm.addEventListener("submit", async (event) => {
@@ -425,6 +475,7 @@ refs.trackSearch.addEventListener("input", () => {
 });
 
 const boot = async () => {
+  await loadSetupState();
   const token = getShareTokenFromPath();
   if (window.location.pathname.startsWith("/s/")) {
     await renderShareView(token);
@@ -434,6 +485,7 @@ const boot = async () => {
   if (!state.accessToken) {
     setAuthState(null);
     requireAuthUi(false);
+    renderAuthMode();
     return;
   }
 
@@ -444,6 +496,7 @@ const boot = async () => {
     setAccessToken(null);
     setAuthState(null);
     requireAuthUi(false);
+    renderAuthMode();
   }
 };
 

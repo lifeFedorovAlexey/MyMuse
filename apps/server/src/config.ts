@@ -9,7 +9,9 @@ const envSchema = z.object({
   AUTH_REQUIRED: z
     .string()
     .transform((value) => value.toLowerCase() !== "false")
-    .default("true")
+    .default("true"),
+  STORAGE_DRIVER: z.enum(["postgres", "file"]).default("postgres"),
+  DATABASE_URL: z.string().default("postgres://mymuse:mymuse@127.0.0.1:5432/mymuse")
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

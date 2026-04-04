@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { DbShape, Invite, Playlist, Share, ShareType, Track, User, UserRole } from "./types.js";
+import type { AppStore } from "./store.contract.js";
 
 const initialDb: DbShape = {
   users: [],
@@ -11,7 +12,7 @@ const initialDb: DbShape = {
   shares: []
 };
 
-export class FileStore {
+export class FileStore implements AppStore {
   private readonly dbFile: string;
   private readonly uploadsDir: string;
 
