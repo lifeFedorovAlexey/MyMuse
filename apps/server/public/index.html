@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyMuse Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">MyMuse</p>
+        <h1>Self-hosted music library demo</h1>
+        <p class="desc">
+          Upload tracks, stream online, curate playlists, and share links. You own the server and the stored content.
+        </p>
+      </header>
+
+      <section class="panel" id="auth-panel">
+        <h2>Authentication</h2>
+        <div class="grid">
+          <article>
+            <h3>Register Owner (first run)</h3>
+            <form id="register-form">
+              <input id="register-name" type="text" placeholder="Name" required />
+              <input id="register-email" type="email" placeholder="Email" required />
+              <input id="register-password" type="password" placeholder="Password (min 8)" required />
+              <button type="submit">Register owner</button>
+            </form>
+          </article>
+          <article>
+            <h3>Login</h3>
+            <form id="login-form">
+              <input id="login-email" type="email" placeholder="Email" required />
+              <input id="login-password" type="password" placeholder="Password" required />
+              <button type="submit">Login</button>
+              <button id="logout-btn" type="button" class="secondary">Logout</button>
+            </form>
+          </article>
+        </div>
+        <p id="auth-status" class="item-sub">Not authenticated.</p>
+      </section>
+
+      <section class="stats" id="stats">
+        <article class="stat-card">
+          <p>Tracks</p>
+          <strong id="stat-tracks">0</strong>
+        </article>
+        <article class="stat-card">
+          <p>Playlists</p>
+          <strong id="stat-playlists">0</strong>
+        </article>
+        <article class="stat-card">
+          <p>Active Shares</p>
+          <strong id="stat-shares">0</strong>
+        </article>
+        <article class="stat-card">
+          <p>Storage</p>
+          <strong id="stat-storage">0 MB</strong>
+        </article>
+      </section>
+
+      <section class="panel" id="upload-panel">
+        <h2>Add Track</h2>
+        <form id="upload-form">
+          <input id="file-input" type="file" name="track" accept="audio/*" required />
+          <button type="submit">Upload</button>
+        </form>
+        <p class="hint">
+          Legal notice: instance owners are responsible for rights and legality of uploaded or shared music.
+        </p>
+      </section>
+
+      <section class="grid" id="library-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Library</h2>
+            <input id="track-search" type="search" placeholder="Search title, artist, album..." />
+          </div>
+          <ul id="track-list" class="list"></ul>
+        </article>
+
+        <article class="panel">
+          <h2>Playlists</h2>
+          <form id="playlist-form">
+            <input id="playlist-name" type="text" placeholder="Playlist name" required />
+            <button type="submit">Create</button>
+          </form>
+          <ul id="playlist-list" class="list"></ul>
+        </article>
+      </section>
+
+      <section class="panel" id="share-panel">
+        <h2>Share Manager</h2>
+        <ul id="share-list" class="list"></ul>
+      </section>
+
+      <section class="panel" id="player-panel">
+        <h2>Player</h2>
+        <p id="now-playing">Nothing is playing</p>
+        <audio id="player" controls preload="none"></audio>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

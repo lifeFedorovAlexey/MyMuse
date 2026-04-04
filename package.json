@@ -1,0 +1,14 @@
+{
+  "name": "mymuse",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace apps/server run dev",
+    "build:server": "npm --workspace apps/server run build",
+    "start:server": "npm --workspace apps/server run start",
+    "test:server": "npm --workspace apps/server run test"
+  }
+}
