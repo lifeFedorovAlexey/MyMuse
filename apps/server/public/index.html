@@ -1,114 +1,296 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MyMuse Demo</title>
+    <title>MyMuse // Pip Console</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="app">
-      <header class="hero">
-        <p class="eyebrow">MyMuse</p>
-        <h1>Твоя музыкальная библиотека</h1>
-        <p class="desc">
-          Загружай треки, слушай онлайн, собирай плейлисты и делись ссылками.
-        </p>
-      </header>
-
-      <section class="panel" id="auth-panel">
-        <h2>Вход</h2>
-        <p id="auth-hint" class="item-sub">
-          Первый запуск: создай владельца. Дальше вход только через логин.
-        </p>
-        <p id="auth-message" class="status-msg hidden"></p>
-        <div class="grid auth-grid">
-          <article id="register-card">
-            <h3>Регистрация владельца</h3>
-            <form id="register-form">
-              <input id="register-name" type="text" placeholder="Имя" required />
-              <input id="register-email" type="email" placeholder="Email" required />
-              <input id="register-password" type="password" placeholder="Пароль (мин. 8)" required />
-              <button type="submit">Создать владельца</button>
-            </form>
-          </article>
-          <article id="login-card">
-            <h3>Логин</h3>
-            <form id="login-form">
-              <input id="login-email" type="email" placeholder="Email" required />
-              <input id="login-password" type="password" placeholder="Пароль" required />
-              <button type="submit">Войти</button>
-            </form>
-          </article>
-        </div>
-        <div class="auth-actions">
-          <button id="logout-btn" type="button" class="secondary">Выйти</button>
-        </div>
-        <p id="auth-status" class="item-sub">Not authenticated.</p>
-      </section>
-
-      <section class="stats" id="stats">
-        <article class="stat-card">
-          <p>Треки</p>
-          <strong id="stat-tracks">0</strong>
-        </article>
-        <article class="stat-card">
-          <p>Плейлисты</p>
-          <strong id="stat-playlists">0</strong>
-        </article>
-        <article class="stat-card">
-          <p>Ссылки</p>
-          <strong id="stat-shares">0</strong>
-        </article>
-        <article class="stat-card">
-          <p>Хранилище</p>
-          <strong id="stat-storage">0 MB</strong>
-        </article>
-      </section>
-
-      <section class="panel" id="upload-panel">
-        <h2>Добавить трек</h2>
-        <form id="upload-form">
-          <input id="file-input" type="file" name="track" accept="audio/*" required />
-          <button type="submit">Загрузить</button>
-        </form>
-        <p class="hint">
-          Важно: владелец инстанса отвечает за законность загруженного контента.
-        </p>
-      </section>
-
-      <section class="grid" id="library-grid">
-        <article class="panel">
-          <div class="panel-header">
-            <h2>Библиотека</h2>
-            <input id="track-search" type="search" placeholder="Поиск по названию, артисту, альбому..." />
+    <section class="auth-shell" id="auth-shell">
+      <div class="auth-grid">
+        <aside class="auth-aside">
+          <div class="brand">
+            <div class="brand-mark">M</div>
+            <div>
+              <p class="brand-kicker">Vault audio terminal</p>
+              <h1>MyMuse</h1>
+            </div>
           </div>
-          <ul id="track-list" class="list"></ul>
-        </article>
 
-        <article class="panel">
-          <h2>Playlists</h2>
-          <form id="playlist-form">
-            <input id="playlist-name" type="text" placeholder="Playlist name" required />
-            <button type="submit">Create</button>
-          </form>
-          <ul id="playlist-list" class="list"></ul>
-        </article>
-      </section>
+          <div class="auth-copy">
+            <p class="section-kicker">Access node</p>
+            <h2>Private library login</h2>
+            <p class="soft-text">
+              Один входной экран для owner и invited user. После входа остаются только библиотека, управление и
+              нижний плеер.
+            </p>
+          </div>
 
-      <section class="panel" id="share-panel">
-        <h2>Общие ссылки</h2>
-        <ul id="share-list" class="list"></ul>
-      </section>
+          <section class="sidebar-card disclaimer">
+            <p class="section-kicker">Notice</p>
+            <p class="soft-text">
+              Владелец инстанса отвечает за законность загруженного и расшаренного контента.
+            </p>
+          </section>
+        </aside>
 
-      <section class="panel" id="player-panel">
-        <h2>Плеер</h2>
-        <p id="now-playing">Сейчас ничего не играет</p>
-        <audio id="player" controls preload="none"></audio>
-      </section>
-    </main>
+        <main class="auth-main">
+          <section class="auth-card" id="auth-panel">
+            <div class="section-heading">
+              <p class="section-kicker">Identity</p>
+              <h2>Авторизация</h2>
+            </div>
+            <p id="auth-hint" class="soft-text">Первый запуск: создай владельца.</p>
+            <p id="auth-message" class="status-msg hidden"></p>
+
+            <article id="register-card" class="stack hidden">
+              <h3>Owner Registration</h3>
+              <form id="register-form" class="stack">
+                <input id="register-name" type="text" placeholder="Имя" required />
+                <input id="register-email" type="email" placeholder="Email" required />
+                <input id="register-password" type="password" placeholder="Пароль (мин. 8)" required />
+                <button type="submit">Create owner</button>
+              </form>
+            </article>
+
+            <article id="login-card" class="stack hidden">
+              <h3>Login</h3>
+              <form id="login-form" class="stack">
+                <input id="login-email" type="email" placeholder="Email" required />
+                <input id="login-password" type="password" placeholder="Пароль" required />
+                <button type="submit">Sign in</button>
+              </form>
+            </article>
+          </section>
+
+          <section class="auth-card hidden" id="invite-panel">
+            <div class="section-heading">
+              <p class="section-kicker">Invite</p>
+              <h2>Accept Access</h2>
+            </div>
+            <p class="soft-text">Подключись к инстансу и создай обычный пользовательский аккаунт.</p>
+            <p id="invite-message" class="status-msg hidden"></p>
+            <form id="invite-form" class="stack">
+              <input id="invite-name" type="text" placeholder="Имя" required />
+              <input id="invite-email" type="email" placeholder="Email" required />
+              <input id="invite-password" type="password" placeholder="Пароль (мин. 8)" required />
+              <button type="submit">Accept invite</button>
+            </form>
+          </section>
+        </main>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="app-shell">
+      <div class="monitor-frame">
+        <header class="monitor-strip" id="overview-section">
+          <div class="monitor-title">
+            <span class="section-kicker">Vault-tec audio monitor</span>
+            <h2>MYMUSE AUDIO TERMINAL</h2>
+          </div>
+
+          <section class="stats hidden" id="stats">
+            <article class="stat-card">
+              <p>Tracks</p>
+              <strong id="stat-tracks">0</strong>
+            </article>
+            <article class="stat-card">
+              <p>Playlists</p>
+              <strong id="stat-playlists">0</strong>
+            </article>
+            <article class="stat-card">
+              <p>Links</p>
+              <strong id="stat-shares">0</strong>
+            </article>
+            <article class="stat-card">
+              <p>Storage</p>
+              <strong id="stat-storage">0 MB</strong>
+            </article>
+          </section>
+        </header>
+
+        <section class="reference-shell" id="reference-shell" aria-hidden="true"></section>
+
+        <section class="workspace hidden" id="workspace">
+          <section class="screen-play feature-card" id="play-section">
+            <div class="screen-layout">
+              <div class="screen-focus-pane play-focus-pane">
+                <section class="play-console hidden" id="player-panel">
+                  <div class="play-glyph play-eq" id="play-screen-glyph" aria-hidden="true"></div>
+                  <div class="play-console__meta">
+                    <div class="cover-art play-console__cover" id="cover-art">♪</div>
+                    <div class="player-meta">
+                      <p class="player-kicker">Now playing</p>
+                      <strong id="now-playing-title">Ничего не выбрано</strong>
+                      <span id="now-playing-subtitle">Выбери трек в библиотеке или по shared link.</span>
+                    </div>
+                  </div>
+
+                  <div class="play-console__transport">
+                    <div class="volume-popover" id="player-volume-popover">
+                      <div class="volume-control">
+                        <input id="player-volume" type="range" min="0" max="100" value="90" aria-label="Volume" />
+                      </div>
+                      <button id="player-volume-toggle" type="button" class="transport-button transport-button-side volume-toggle ghost" aria-label="Отключить звук" title="Громкость">
+                        <span class="utility-button__icon volume-icon" id="player-volume-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                            <path class="volume-icon__speaker" d="M4 10h4l5-4v12l-5-4H4z"></path>
+                            <path class="volume-icon__wave volume-icon__wave--1" d="M16 9c1.4 1.2 1.4 4.8 0 6"></path>
+                            <path class="volume-icon__wave volume-icon__wave--2" d="M18.5 7c2.7 2.4 2.7 7.6 0 10"></path>
+                            <path class="volume-icon__mute" d="M16 9l5 5M21 9l-5 5"></path>
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+                    <button id="player-prev" type="button" class="transport-button ghost" aria-label="Previous track">⏮</button>
+                    <button id="player-toggle" type="button" class="transport-button transport-button-primary" aria-label="Play or pause">▶</button>
+                    <button id="player-next" type="button" class="transport-button ghost" aria-label="Next track">⏭</button>
+                    <button id="player-lyrics" type="button" class="transport-button transport-button-side ghost" aria-label="Текст трека" title="Текст трека">
+                      <span class="utility-button__icon" aria-hidden="true">T</span>
+                    </button>
+                  </div>
+
+                  <div class="play-console__timeline">
+                    <div class="progress-row">
+                      <span id="current-time">0:00</span>
+                      <div class="stream-progress">
+                        <div class="stream-progress__track"></div>
+                        <div class="stream-progress__buffered" id="player-buffered"></div>
+                        <input id="player-progress" type="range" min="0" max="100" value="0" aria-label="Track progress" />
+                      </div>
+                      <span id="duration-time">0:00</span>
+                    </div>
+                    <div class="play-console__subline">
+                      <span class="soft-text">Поток воспроизведения и буфер загрузки</span>
+                      <span class="soft-text" id="player-stream-status">Ожидание трека</span>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="screen-main feature-card" id="library-section">
+            <div class="screen-layout">
+              <div class="screen-list-pane">
+                <div class="card-head">
+                  <div class="section-heading">
+                    <p class="section-kicker">Library</p>
+                    <h2>Библиотека</h2>
+                  </div>
+                  <input id="track-search" type="search" placeholder="Поиск по названию, артисту, альбому..." />
+                </div>
+                <div class="track-list" id="track-list"></div>
+              </div>
+              <aside class="screen-focus-pane library-focus-pane">
+                <p class="section-kicker">Выбранный трек</p>
+                <h2 id="library-focus-title">Ничего не выбрано</h2>
+                <p class="soft-text" id="library-focus-subtitle">Открой трек, чтобы увидеть метаданные и начать воспроизведение.</p>
+                <div class="play-glyph track-focus-glyph" id="library-focus-glyph">♪</div>
+                <div class="focus-meta-grid">
+                  <div class="focus-meta-item">
+                    <span class="section-kicker">Artist</span>
+                    <strong id="library-focus-artist">Unknown artist</strong>
+                  </div>
+                  <div class="focus-meta-item">
+                    <span class="section-kicker">Album</span>
+                    <strong id="library-focus-album">Unknown album</strong>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen-main feature-card" id="lists-section">
+            <div class="screen-layout">
+              <div class="screen-list-pane">
+                <div class="card-head">
+                  <div class="section-heading">
+                    <p class="section-kicker">Lists</p>
+                    <h2>Плейлисты</h2>
+                  </div>
+                </div>
+                <form id="playlist-form" class="inline-form">
+                  <input id="playlist-name" type="text" placeholder="Название плейлиста" required />
+                  <button type="submit">Create</button>
+                </form>
+                <div class="playlist-list" id="playlist-list"></div>
+              </div>
+              <aside class="screen-focus-pane list-focus-pane">
+                <p class="section-kicker">Summary</p>
+                <h2 id="lists-focus-title">Плейлистов пока нет</h2>
+                <p class="soft-text" id="lists-focus-subtitle">Создай плейлист и начни собирать коллекции.</p>
+                <div class="play-glyph track-focus-glyph" id="lists-focus-glyph">≡</div>
+                <div class="focus-meta-grid">
+                  <div class="focus-meta-item">
+                    <span class="section-kicker">Count</span>
+                    <strong id="lists-focus-count">0</strong>
+                  </div>
+                  <div class="focus-meta-item">
+                    <span class="section-kicker">Tracks</span>
+                    <strong id="lists-focus-tracks">0</strong>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen-main feature-card access-screen" id="access-section">
+            <div class="card-head">
+              <div class="section-heading">
+                <p class="section-kicker">Access</p>
+                <h2>Доступ</h2>
+              </div>
+            </div>
+
+            <div class="access-grid">
+              <section class="feature-card operator-strip">
+                <span class="section-kicker">Operator</span>
+                <strong id="hero-status">Ожидает входа</strong>
+                <span class="soft-text" id="hero-subtitle">Авторизуйся, чтобы открыть медиатеку.</span>
+                <p id="auth-status" class="soft-text">Не авторизован.</p>
+                <button id="logout-btn" type="button" class="secondary hidden">Logout</button>
+              </section>
+
+              <section class="feature-card upload-card">
+                <div class="section-heading">
+                  <p class="section-kicker">Import</p>
+                  <h2>Load Audio Asset</h2>
+                </div>
+                <form id="upload-form" class="upload-form">
+                  <label class="upload-dropzone" for="file-input">
+                    <input id="file-input" type="file" name="track" accept="audio/*" required />
+                    <span class="upload-title">Перетащи файл или выбери его с диска</span>
+                    <span class="soft-text" id="selected-file-name">Поддерживаются обычные аудиофайлы.</span>
+                  </label>
+                  <button type="submit">Upload</button>
+                </form>
+              </section>
+
+              <section class="feature-card shares-card" id="shares-section">
+                <div class="section-heading">
+                  <p class="section-kicker">Links</p>
+                  <h2>Share Console</h2>
+                </div>
+                <div class="share-list" id="share-list"></div>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <audio id="player" preload="none"></audio>
+
+        <nav class="pip-tabs">
+          <button type="button" class="nav-link active" data-view="play">Плеер</button>
+          <button type="button" class="nav-link" data-view="library">Треки</button>
+          <button type="button" class="nav-link" data-view="lists">Списки</button>
+          <button type="button" class="nav-link" data-view="access">Доступ</button>
+        </nav>
+      </div>
+    </div>
 
     <div id="toast" class="toast hidden"></div>
-    <script src="/app.js" type="module"></script>
+    <script src="/js/main.js" type="module"></script>
   </body>
 </html>

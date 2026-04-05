@@ -21,6 +21,43 @@ const createSafeFilename = (inputName: string): string => {
   return `${Date.now()}-${randomUUID()}${ext}`;
 };
 
+const sanitizeMetadataPart = (value: string): string =>
+  value
+    .replace(/[_]+/g, " ")
+    .replace(/\s+-\s+/g, " - ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\d{6,}\b/g, "")
+    .trim();
+
+const inferTrackMetadata = (originalFilename: string): Pick<Track, "title" | "artist" | "album"> => {
+  const parsed = path.parse(originalFilename);
+  const normalized = sanitizeMetadataPart(parsed.name);
+
+  const separators = [" - ", " – ", " — "];
+  for (const separator of separators) {
+    if (!normalized.includes(separator)) {
+      continue;
+    }
+
+    const [artistRaw, ...titleParts] = normalized.split(separator);
+    const artist = sanitizeMetadataPart(artistRaw);
+    const title = sanitizeMetadataPart(titleParts.join(" - "));
+    if (artist && title) {
+      return {
+        title,
+        artist,
+        album: "Single"
+      };
+    }
+  }
+
+  return {
+    title: normalized || "Unknown title",
+    artist: "Unknown artist",
+    album: "Unknown album"
+  };
+};
+
 type BuildServerOptions = {
   dataDir?: string;
   publicDir?: string;
@@ -31,8 +68,19 @@ type BuildServerOptions = {
 
 type AuthRequest = FastifyRequest & { authUser?: User };
 
+type RateLimitRule = {
+  limit: number;
+  windowMs: number;
+};
+
+type RateLimitBucket = {
+  count: number;
+  resetAt: number;
+};
+
 const publicApiRoutes = new Set([
   "/health",
+  "/ready",
   "/legal/disclaimer",
   "/",
   "/s/:token",
@@ -46,10 +94,27 @@ const publicApiRoutes = new Set([
   "/api/tracks/:id/stream"
 ]);
 
+const publicRateLimits = new Map<string, RateLimitRule>([
+  ["/auth/register-owner", { limit: 5, windowMs: 10 * 60 * 1000 }],
+  ["/auth/login", { limit: 20, windowMs: 10 * 60 * 1000 }],
+  ["/auth/accept-invite", { limit: 10, windowMs: 10 * 60 * 1000 }],
+  ["/api/shares/:token", { limit: 120, windowMs: 60 * 1000 }],
+  ["/api/shares/:token/stream", { limit: 120, windowMs: 60 * 1000 }],
+  ["/api/tracks/:id/stream", { limit: 240, windowMs: 60 * 1000 }],
+  ["/s/:token", { limit: 120, windowMs: 60 * 1000 }]
+]);
+
+const getClientAddress = (request: FastifyRequest): string =>
+  request.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() ||
+  request.ip ||
+  "unknown";
+
 export const buildServer = (options: BuildServerOptions = {}): FastifyInstance => {
   const app = Fastify({
     logger: options.logger ?? true
   });
+  const rateLimitBuckets = new Map<string, RateLimitBucket>();
+  let storageReady = false;
   const dataDir = path.resolve(options.dataDir ?? config.DATA_DIR);
   const publicDir = path.resolve(options.publicDir ?? path.join(process.cwd(), "public"));
   const storageDriver = options.storageDriver ?? config.STORAGE_DRIVER;
@@ -133,14 +198,33 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
 
   app.addHook("onReady", async () => {
     await store.init();
+    storageReady = true;
   });
 
   app.addHook("preHandler", async (request, reply) => {
+    const pattern = request.routeOptions.url ?? request.url;
+    const publicRateLimit = publicRateLimits.get(pattern);
+    if (publicRateLimit) {
+      const bucketKey = `${pattern}:${getClientAddress(request)}`;
+      const now = Date.now();
+      const existing = rateLimitBuckets.get(bucketKey);
+      if (!existing || existing.resetAt <= now) {
+        rateLimitBuckets.set(bucketKey, {
+          count: 1,
+          resetAt: now + publicRateLimit.windowMs
+        });
+      } else if (existing.count >= publicRateLimit.limit) {
+        reply.header("Retry-After", Math.ceil((existing.resetAt - now) / 1000));
+        return reply.tooManyRequests("Rate limit exceeded");
+      } else {
+        existing.count += 1;
+      }
+    }
+
     if (!config.AUTH_REQUIRED) {
       return;
     }
 
-    const pattern = request.routeOptions.url ?? request.url;
     if (publicApiRoutes.has(pattern)) {
       return;
     }
@@ -170,6 +254,30 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
     env: config.NODE_ENV,
     timestamp: new Date().toISOString()
   }));
+
+  app.get("/ready", async (request, reply) => {
+    if (!storageReady) {
+      return reply.code(503).send({
+        status: "starting",
+        storageReady: false
+      });
+    }
+
+    try {
+      await store.listTracks();
+      return {
+        status: "ready",
+        storageReady: true,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      request.log?.error?.(error);
+      return reply.code(503).send({
+        status: "degraded",
+        storageReady: false
+      });
+    }
+  });
 
   app.get("/legal/disclaimer", async () => ({
     message: "MyMuse is a self-hosted tool. Users are responsible for legality of uploaded and shared content."
@@ -323,12 +431,12 @@ export const buildServer = (options: BuildServerOptions = {}): FastifyInstance =
     const destination = path.join(store.getUploadsDir(), filename);
     await pipeline(file.file, createWriteStream(destination));
     const stat = await fs.stat(destination);
-    const parsed = path.parse(file.filename);
+    const metadata = inferTrackMetadata(file.filename);
 
     const track = await store.addTrack({
-      title: parsed.name || "Unknown title",
-      artist: "Unknown artist",
-      album: "Unknown album",
+      title: metadata.title,
+      artist: metadata.artist,
+      album: metadata.album,
       filename,
       mimeType: file.mimetype || "audio/mpeg",
       size: stat.size
