@@ -1,4 +1,7 @@
 import { refs } from "./dom.js";
+import { createPlaylistCard } from "./components/playlistCard.js";
+import { createShareCard } from "./components/shareCard.js";
+import { createTrackCard } from "./components/trackCard.js";
 import { renderHudMenu } from "./components/hudMenu.js";
 import { renderLeftMenu } from "./components/leftMenu.js";
 import { renderEmpty } from "./helpers.js";
@@ -161,18 +164,6 @@ export const currentTrackList = () => {
   );
 };
 
-const makePlaylistSelector = () => {
-  const select = document.createElement("select");
-  select.className = "track-inline-select";
-  for (const playlist of state.playlists) {
-    const option = document.createElement("option");
-    option.value = playlist.id;
-    option.textContent = playlist.name;
-    select.appendChild(option);
-  }
-  return select;
-};
-
 export const renderPlayScreen = () => {
   refs.playScreenGlyph.textContent = "";
 };
@@ -224,86 +215,29 @@ export const renderTracks = ({ onAddToPlaylist, onShareTrack, onEditTrack, onDel
   }
 
   for (const track of tracks) {
-    const card = document.createElement("article");
-    card.className = "track-card";
-
-    const main = document.createElement("div");
-    main.className = "track-main";
-
-    const head = document.createElement("div");
-    head.className = "track-title-row";
-    head.innerHTML = `
-      <div>
-        <div class="track-title">${track.title}</div>
-        <div class="track-subtitle">${track.artist} • ${track.album}</div>
-      </div>
-      <div class="track-subtitle">${new Date(track.createdAt).toLocaleDateString("ru-RU")}</div>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "track-actions";
-
-    const playButton = document.createElement("button");
-    playButton.textContent = state.currentTrack?.id === track.id && !refs.player.paused ? "Пауза" : "Play";
-    playButton.addEventListener("click", async () => {
-      if (state.currentTrack?.id === track.id && !refs.player.paused) {
-        refs.player.pause();
-      } else if (state.currentTrack?.id === track.id && refs.player.paused) {
-        await refs.player.play();
-      } else {
-        await playTrack(track);
-      }
-      syncPlayerMeta();
-      renderLibraryFocus();
-      renderPlayScreen();
-      renderTracks({ onAddToPlaylist, onShareTrack, onEditTrack, onDeleteTrack });
+    const card = createTrackCard({
+      track,
+      isCurrentTrackPlaying: state.currentTrack?.id === track.id && !refs.player.paused,
+      showPrivateActions: !state.shareToken,
+      playlists: state.playlists,
+      onPlayToggle: async () => {
+        if (state.currentTrack?.id === track.id && !refs.player.paused) {
+          refs.player.pause();
+        } else if (state.currentTrack?.id === track.id && refs.player.paused) {
+          await refs.player.play();
+        } else {
+          await playTrack(track);
+        }
+        syncPlayerMeta();
+        renderLibraryFocus();
+        renderPlayScreen();
+        renderTracks({ onAddToPlaylist, onShareTrack, onEditTrack, onDeleteTrack });
+      },
+      onAddToPlaylist: async (playlistId) => onAddToPlaylist(track, playlistId),
+      onShareTrack: async () => onShareTrack(track),
+      onEditTrack: async () => onEditTrack(track),
+      onDeleteTrack: async () => onDeleteTrack(track)
     });
-    actions.appendChild(playButton);
-
-    if (!state.shareToken) {
-      const moreButton = document.createElement("button");
-      moreButton.className = "ghost";
-      moreButton.textContent = "More";
-
-      const morePanel = document.createElement("div");
-      morePanel.className = "track-more-actions hidden";
-
-      if (state.playlists.length > 0) {
-        const select = makePlaylistSelector();
-        const addButton = document.createElement("button");
-        addButton.className = "secondary";
-        addButton.textContent = "Add to list";
-        addButton.addEventListener("click", async () => onAddToPlaylist(track, select.value));
-        morePanel.append(select, addButton);
-      }
-
-      const shareButton = document.createElement("button");
-      shareButton.className = "secondary";
-      shareButton.textContent = "Share";
-      shareButton.addEventListener("click", async () => onShareTrack(track));
-      morePanel.appendChild(shareButton);
-
-      const editButton = document.createElement("button");
-      editButton.className = "ghost";
-      editButton.textContent = "Edit";
-      editButton.addEventListener("click", async () => onEditTrack(track));
-      morePanel.appendChild(editButton);
-
-      const deleteButton = document.createElement("button");
-      deleteButton.className = "danger";
-      deleteButton.textContent = "Drop";
-      deleteButton.addEventListener("click", async () => onDeleteTrack(track));
-      morePanel.appendChild(deleteButton);
-
-      moreButton.addEventListener("click", () => {
-        morePanel.classList.toggle("hidden");
-      });
-
-      actions.append(moreButton, morePanel);
-    }
-
-    main.append(head, actions);
-    card.append(main);
     refs.trackList.appendChild(card);
   }
 };
@@ -325,69 +259,15 @@ export const renderPlaylists = ({ onSharePlaylist, onRemoveFromPlaylist }) => {
   }
 
   for (const playlist of state.playlists) {
-    const card = document.createElement("article");
-    card.className = "playlist-card";
-
-    const head = document.createElement("div");
-    head.className = "playlist-head";
-    head.innerHTML = `
-      <div>
-        <div class="track-title">${playlist.name}</div>
-        <div class="playlist-subtitle">${playlist.tracks.length} tracks</div>
-      </div>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "playlist-actions";
-
-    const shareButton = document.createElement("button");
-    shareButton.className = "secondary";
-    shareButton.textContent = "Share";
-    shareButton.addEventListener("click", async () => onSharePlaylist(playlist));
-    actions.appendChild(shareButton);
-
-    card.append(head, actions);
-
-    const list = document.createElement("ul");
-    list.className = "playlist-track-list";
-
-    if (playlist.tracks.length === 0) {
-      const empty = document.createElement("li");
-      empty.className = "playlist-track-row";
-      empty.innerHTML = "<span class='playlist-subtitle'>Пока пусто. Добавь треки из библиотеки.</span>";
-      list.appendChild(empty);
-    } else {
-      for (const track of playlist.tracks) {
-        const row = document.createElement("li");
-        row.className = "playlist-track-row";
-
-        const meta = document.createElement("div");
-        meta.innerHTML = `<strong>${track.title}</strong><div class="playlist-subtitle">${track.artist}</div>`;
-
-        const rowActions = document.createElement("div");
-        rowActions.className = "playlist-actions";
-
-        const playButton = document.createElement("button");
-        playButton.className = "secondary";
-        playButton.textContent = "Play";
-        playButton.addEventListener("click", async () => {
-          await playTrack(track);
-          syncPlayerMeta();
-        });
-        rowActions.appendChild(playButton);
-
-        const removeButton = document.createElement("button");
-        removeButton.className = "ghost";
-        removeButton.textContent = "Remove";
-        removeButton.addEventListener("click", async () => onRemoveFromPlaylist(playlist, track));
-        rowActions.appendChild(removeButton);
-
-        row.append(meta, rowActions);
-        list.appendChild(row);
-      }
-    }
-
-    card.appendChild(list);
+    const card = createPlaylistCard({
+      playlist,
+      onSharePlaylist: async () => onSharePlaylist(playlist),
+      onPlayTrack: async (track) => {
+        await playTrack(track);
+        syncPlayerMeta();
+      },
+      onRemoveTrack: async (track) => onRemoveFromPlaylist(playlist, track)
+    });
     refs.playlistList.appendChild(card);
   }
 };
@@ -406,35 +286,11 @@ export const renderShares = ({ onCopyShare, onRevokeShare }) => {
   }
 
   for (const share of state.shares) {
-    const card = document.createElement("article");
-    card.className = "share-card";
-    card.innerHTML = `
-      <div class="share-head">
-        <div>
-          <div class="track-title">${share.type === "track" ? "Track link" : "Playlist link"}</div>
-          <div class="share-meta">Target: ${share.targetId}</div>
-        </div>
-        <div class="share-meta">${share.expiresAt ? new Date(share.expiresAt).toLocaleString("ru-RU") : "Never expires"}</div>
-      </div>
-      <p><a class="share-url" href="${share.url}" target="_blank" rel="noreferrer">${share.url}</a></p>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "share-actions";
-
-    const copyButton = document.createElement("button");
-    copyButton.className = "secondary";
-    copyButton.textContent = "Copy";
-    copyButton.addEventListener("click", async () => onCopyShare(share));
-    actions.appendChild(copyButton);
-
-    const revokeButton = document.createElement("button");
-    revokeButton.className = "danger";
-    revokeButton.textContent = "Revoke";
-    revokeButton.addEventListener("click", async () => onRevokeShare(share));
-    actions.appendChild(revokeButton);
-
-    card.appendChild(actions);
+    const card = createShareCard({
+      share,
+      onCopyShare: async () => onCopyShare(share),
+      onRevokeShare: async () => onRevokeShare(share)
+    });
     refs.shareList.appendChild(card);
   }
 };

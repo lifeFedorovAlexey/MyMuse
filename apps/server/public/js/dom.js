@@ -45,6 +45,7 @@ export const refs = {
   player: document.getElementById("player"),
   playerPrev: document.getElementById("player-prev"),
   playerToggle: document.getElementById("player-toggle"),
+  playerToggleIcon: document.getElementById("player-toggle-icon"),
   playerNext: document.getElementById("player-next"),
   playerProgress: document.getElementById("player-progress"),
   playerBuffered: document.getElementById("player-buffered"),

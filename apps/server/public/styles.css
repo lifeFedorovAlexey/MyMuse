@@ -250,10 +250,10 @@ select:focus {
 .app-shell {
   min-height: 100vh;
   padding:
-    max(18px, env(safe-area-inset-top))
-    max(18px, env(safe-area-inset-right))
-    max(18px, env(safe-area-inset-bottom))
-    max(18px, env(safe-area-inset-left));
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
 }
 
 .monitor-frame {
@@ -1286,35 +1286,56 @@ select:focus {
   background: transparent;
   border: 1px solid rgba(145, 255, 143, 0.14);
   border-radius: 999px;
-  box-shadow: none;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(145, 255, 143, 0.03);
+  aspect-ratio: 1 / 1;
 }
 
 .utility-button__icon {
   display: block;
   font-size: 1rem;
   line-height: 1;
-  color: var(--text-strong);
+  color: inherit;
 }
 
-.volume-icon {
+.media-icon,
+.volume-icon,
+.text-icon {
   display: grid;
   place-items: center;
   width: 16px;
   height: 16px;
 }
 
-.volume-icon svg {
+.media-icon svg,
+.volume-icon svg,
+.text-icon svg {
   width: 16px;
   height: 16px;
+}
+
+.volume-icon svg {
   overflow: visible;
 }
 
-.volume-icon path {
+.media-icon path,
+.volume-icon path,
+.text-icon path {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.media-icon__play,
+.media-icon__pause {
+  display: none;
+}
+
+.transport-button[data-state="play"] .media-icon__play,
+.transport-button[data-state="pause"] .media-icon__pause {
+  display: block;
 }
 
 .volume-icon__speaker {
@@ -1339,17 +1360,22 @@ select:focus {
 }
 
 .transport-button-primary {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 999px;
-  color: #091008;
-  background: var(--accent);
-  box-shadow: 0 0 18px rgba(145, 255, 143, 0.14);
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(145, 255, 143, 0.18), rgba(145, 255, 143, 0.06) 58%, transparent 100%);
+  border-color: rgba(145, 255, 143, 0.36);
+  box-shadow:
+    inset 0 0 0 1px rgba(145, 255, 143, 0.06),
+    0 0 16px rgba(145, 255, 143, 0.08);
 }
 
 .transport-button-primary:hover,
 .transport-button-primary:focus-visible {
-  background: #baffb9;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(145, 255, 143, 0.24), rgba(145, 255, 143, 0.08) 58%, transparent 100%);
 }
 
 .transport-button-side {
@@ -1357,6 +1383,7 @@ select:focus {
   height: 40px;
   border: 1px solid rgba(145, 255, 143, 0.12);
   border-radius: 999px;
+  aspect-ratio: 1 / 1;
 }
 
 .volume-toggle {
@@ -1737,10 +1764,10 @@ input[type="range"]::-moz-range-progress {
   .auth-shell,
   .app-shell {
     padding:
-      max(12px, env(safe-area-inset-top))
-      max(12px, env(safe-area-inset-right))
-      max(12px, env(safe-area-inset-bottom))
-      max(12px, env(safe-area-inset-left));
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
   }
 
   .monitor-frame {
@@ -1834,10 +1861,10 @@ input[type="range"]::-moz-range-progress {
 @media (max-width: 520px) {
   .app-shell {
     padding:
-      max(8px, env(safe-area-inset-top))
-      max(8px, env(safe-area-inset-right))
-      max(10px, env(safe-area-inset-bottom))
-      max(8px, env(safe-area-inset-left));
+      max(2px, env(safe-area-inset-top))
+      max(2px, env(safe-area-inset-right))
+      max(4px, env(safe-area-inset-bottom))
+      max(2px, env(safe-area-inset-left));
   }
 
   .monitor-frame {
@@ -1995,8 +2022,8 @@ input[type="range"]::-moz-range-progress {
   }
 
   .transport-button-primary {
-    width: 58px;
-    height: 58px;
+    width: 54px;
+    height: 54px;
   }
 
   .pip-tabs {

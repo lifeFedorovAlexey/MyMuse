@@ -152,6 +152,11 @@ const stopEqualizer = () => {
   resetEqBars();
 };
 
+const syncToggleIcon = (isPlaying) => {
+  refs.playerToggle.dataset.state = isPlaying ? "pause" : "play";
+  refs.playerToggle.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+};
+
 const syncVolumeUi = (volume) => {
   const clamped = Math.max(0, Math.min(1, volume));
   refs.player.volume = clamped;
@@ -221,7 +226,7 @@ export const syncPlayerMeta = () => {
   if (!track) {
     refs.nowPlayingTitle.textContent = "Ничего не выбрано";
     refs.nowPlayingSubtitle.textContent = "Выбери трек в библиотеке или по shared link.";
-    refs.playerToggle.textContent = "▶";
+    syncToggleIcon(false);
     refs.playerProgress.value = "0";
     refs.playerBuffered.style.width = "0%";
     refs.currentTime.textContent = "0:00";
@@ -303,13 +308,13 @@ export const initPlayerControls = ({ onPlaybackStateChange }) => {
   });
 
   refs.player.addEventListener("play", () => {
-    refs.playerToggle.textContent = "❚❚";
+    syncToggleIcon(true);
     startEqualizer().catch(() => undefined);
     onPlaybackStateChange();
   });
 
   refs.player.addEventListener("pause", () => {
-    refs.playerToggle.textContent = "▶";
+    syncToggleIcon(false);
     stopEqualizer();
     onPlaybackStateChange();
   });
@@ -358,6 +363,7 @@ export const initPlayerControls = ({ onPlaybackStateChange }) => {
     }
   });
 
+  syncToggleIcon(false);
   syncVolumeUi(Number(refs.playerVolume.value) / 100);
   resetEqBars();
   updateTransportState();

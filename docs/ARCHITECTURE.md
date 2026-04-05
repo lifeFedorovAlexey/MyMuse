@@ -1,66 +1,123 @@
-# Architecture (Demo Target)
+# MyMuse Architecture Map
 
-## 1. Компоненты
+## Purpose
 
-- `MyMuse Server` (self-hosted):
-  - REST API + auth + library index;
-  - streaming endpoint (HTTP range);
-  - share-link service;
-  - metadata index (DB);
-  - file storage adapter (local fs / network path / object storage).
+MyMuse is a self-hosted audio terminal with:
 
-- `MyMuse Client` (cross-platform):
-  - единая кодовая база (целевой вариант: Flutter);
-  - login / discover server / library / playlists / player;
-  - offline cache и sync.
+- `apps/server/src/*`: Fastify API, auth, storage, share links, streaming, metadata inference.
+- `apps/server/public/*`: browser UI for auth, library, playlists, access management, and player.
+- `apps/server/test/*`: Vitest coverage for backend flows and frontend behavior contracts.
+- `docs/*`: API and architecture documentation.
 
-## 2. Выбранный стек для демо
+## Current module map
 
-- Backend: Node.js + Fastify + TypeScript.
-- Database: PostgreSQL (dev можно начать с SQLite).
-- Cache/queue: Redis (опционально на MVP).
-- Storage: local filesystem adapter (первый этап).
-- Client: Flutter (iOS, Android, macOS, Linux; позже web).
+### Backend
 
-## 3. Доменная модель (упрощенно)
+- `apps/server/src/index.ts`
+  Starts the HTTP server.
+- `apps/server/src/server.ts`
+  Registers routes, auth gatekeeping, rate limits, health/ready endpoints, uploads, streams, CRUD.
+- `apps/server/src/store.ts`
+  Local filesystem-backed persistence.
+- `apps/server/src/pg-store.ts`
+  Postgres-backed persistence.
+- `apps/server/src/auth.ts`
+  Token and auth helpers.
+- `apps/server/src/types.ts`
+  Shared domain types.
+- `apps/server/src/config.ts`
+  Environment and runtime configuration.
 
-- `User`
-- `Library`
-- `Track`
-- `Playlist`
-- `PlaylistTrack`
-- `ShareLink`
-- `PlaybackSession`
+### Frontend shell
 
-## 4. API (MVP)
+- `apps/server/public/index.html`
+  Static shell and top-level slots only.
+- `apps/server/public/styles.css`
+  Global visual system, layout, responsive behavior, CRT treatment.
+- `apps/server/public/js/main.js`
+  Frontend composition root. Wires boot flow, API calls, rendering, forms, and player controls.
+- `apps/server/public/js/state.js`
+  Shared client state container.
+- `apps/server/public/js/dom.js`
+  Single DOM lookup registry.
+- `apps/server/public/js/helpers.js`
+  Shared UI helpers.
+- `apps/server/public/js/api.js`
+  Browser API wrapper.
 
-- `POST /auth/register-owner`
-- `POST /auth/login`
-- `GET /tracks`
-- `POST /tracks/upload`
-- `GET /tracks/:id/stream`
-- `GET /playlists`
-- `POST /playlists`
-- `POST /shares`
-- `GET /shares/:token`
-- `GET /health`
+### Frontend feature modules
 
-## 5. Безопасность
+- `apps/server/public/js/render.js`
+  Screen orchestration and list rendering.
+- `apps/server/public/js/player.js`
+  Audio element control, EQ behavior, volume behavior, playback state sync.
+- `apps/server/public/js/crtTextWave.js`
+  CRT text highlight effect.
 
-- JWT access + refresh tokens.
-- Подписанные share tokens с TTL.
-- Rate limiting на публичные endpoints.
-- Изоляция файловых путей (никаких path traversal).
-- Опциональный HTTPS через reverse proxy.
+### Frontend UI components
 
-## 6. Масштабирование
+- `apps/server/public/js/components/hudMenu.js`
+  Header HUD renderer.
+- `apps/server/public/js/components/leftMenu.js`
+  Left navigation renderer.
 
-- Single-node mode (домашний сервер) по умолчанию.
-- Возможность вынести storage в S3-совместимый backend.
-- Горизонтальное масштабирование API stateless-слоя.
+## Hard requirements
 
-## 7. AI-функции (будущий этап)
+These rules are mandatory for all future changes.
 
-- Локальная embeddings-индексация metadata и пользовательских лайков.
-- Рекомендации без отправки приватной библиотеки во внешние сервисы (self-host режим).
-- Плагинная интеграция с внешними LLM/ML-провайдерами.
+1. `main.js` is the composition root only.
+   It may wire modules together, but must not absorb feature logic or inline rendering logic.
+
+2. Every reusable UI unit must live in its own file.
+   If a UI element is rendered in more than one place, extract it into `public/js/components/*`.
+
+3. Repeated button construction must be centralized.
+   Shared button patterns must use one helper/component instead of open-coded DOM creation in multiple branches.
+
+4. `dom.js` is the only place for global DOM queries.
+   Feature modules must consume `refs`, not call scattered `getElementById` or `querySelector` at runtime.
+
+5. Feature logic must stay feature-local.
+   Player behavior stays in `player.js`, screen composition in `render.js`, network I/O in `api.js`.
+
+6. Static HTML should define slots, not full repeated feature markup.
+   When a block has internal states or repeated subparts, prefer rendering through a component module.
+
+7. Visual tokens must be reused.
+   Colors, spacing, border language, and motion should come from existing CSS variables and shared classes before adding new one-off values.
+
+8. Responsive behavior is not optional.
+   Every desktop layout change must be checked against tablet and mobile layout rules in the same patch.
+
+9. Every interactive control must have a behavior test.
+   Buttons, toggles, and player controls require Vitest coverage for click behavior and resulting state changes.
+
+10. UI refactors must preserve existing contracts.
+    Public ids used by logic and tests should only change together with coordinated updates in `dom.js`, tests, and behavior modules.
+
+11. New shared UI patterns require tests and documentation in the same PR.
+    If a new reusable component is introduced, add at least one test that covers its contract or the feature using it.
+
+12. No decorative fake behavior when real state exists.
+    Audio meters, playback state, mute state, and stream progress must derive from live state, not CSS-only imitation.
+
+## UI quality bar
+
+Every screen should satisfy all of the following:
+
+- Clear primary action hierarchy.
+- Minimum 44px comfortable hit area for touchable controls.
+- No orphan controls floating without relation to their content.
+- No duplicated information blocks unless comparison is the goal.
+- No hidden overflow clipping important controls or overlays.
+- Motion should be expressive but never disorienting.
+- Labels and icons must remain understandable without relying on color alone.
+- Mobile layouts must stack intentionally, not merely collapse desktop grids.
+
+## Immediate refactor targets
+
+These areas still require active discipline:
+
+- Extract reusable action-button creation from `render.js`.
+- Keep player controls visually grouped and test-covered.
+- Prevent future regression where overlays are positioned relative to the wrong column or clipped by frame edges.

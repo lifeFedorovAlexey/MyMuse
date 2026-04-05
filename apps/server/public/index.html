@@ -86,8 +86,7 @@
       <div class="monitor-frame">
         <header class="monitor-strip" id="overview-section">
           <div class="monitor-title">
-            <span class="section-kicker">Vault-tec audio monitor</span>
-            <h2>MYMUSE AUDIO TERMINAL</h2>
+            <h2>AUDIO TERMINAL</h2>
           </div>
 
           <section class="stats hidden" id="stats">
@@ -143,11 +142,39 @@
                         </span>
                       </button>
                     </div>
-                    <button id="player-prev" type="button" class="transport-button ghost" aria-label="Previous track">⏮</button>
-                    <button id="player-toggle" type="button" class="transport-button transport-button-primary" aria-label="Play or pause">▶</button>
-                    <button id="player-next" type="button" class="transport-button ghost" aria-label="Next track">⏭</button>
+                    <button id="player-prev" type="button" class="transport-button ghost" aria-label="Previous track">
+                      <span class="utility-button__icon media-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                          <path d="M7 7v10"></path>
+                          <path d="M17 7l-7 5 7 5z"></path>
+                        </svg>
+                      </span>
+                    </button>
+                    <button id="player-toggle" type="button" class="transport-button transport-button-primary" aria-label="Play or pause">
+                      <span class="utility-button__icon media-icon media-icon--primary" id="player-toggle-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                          <path class="media-icon__play" d="M9 7l9 5-9 5z"></path>
+                          <path class="media-icon__pause" d="M9 7h3v10H9zM14 7h3v10h-3z"></path>
+                        </svg>
+                      </span>
+                    </button>
+                    <button id="player-next" type="button" class="transport-button ghost" aria-label="Next track">
+                      <span class="utility-button__icon media-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                          <path d="M17 7v10"></path>
+                          <path d="M7 7l7 5-7 5z"></path>
+                        </svg>
+                      </span>
+                    </button>
                     <button id="player-lyrics" type="button" class="transport-button transport-button-side ghost" aria-label="Текст трека" title="Текст трека">
-                      <span class="utility-button__icon" aria-hidden="true">T</span>
+                      <span class="utility-button__icon text-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                          <path d="M6 7h12"></path>
+                          <path d="M12 7v10"></path>
+                          <path d="M9 11h6"></path>
+                          <path d="M8 16h8"></path>
+                        </svg>
+                      </span>
                     </button>
                   </div>
 
